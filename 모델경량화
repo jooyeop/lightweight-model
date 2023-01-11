@@ -1,0 +1,323 @@
+### **딥러닝 모델의 경량화**
+
+- 딥러닝 모델을 영상분석 분야에서 좋은 성능을 보여주고 있지만, 많은 메모리 공간과 연산량을 필요로 하기 때문에 효율이 떨어지는 문제점이 있음
+- 실제 딥러닝을 활용해 영상 분석을 해야하는 로봇, 자율자동차, 스마트폰과 같은 모바일 환경에서는 하드웨어 성능(메모리 크기,  프로세서 성능)이 제한적인 상황이 많음
+- 딥러닝은 저장된 weight(가중치)를 활용해 수 많은 연산을 해야하는데, 프로세서의 성능이 낮은 경우 이미지 처리에 오랜 시간이 걸릴 수 있기 때문에 딥러닝 기술을 실생활에 사용하기 위해서는 경량화 기술이 필수
+
+### 경량화 방법
+
+- **Pruning**
+    - Pruning(가지치기)
+        - 상대적으로 덜 중요한 weight 연결을 삭제(가지치기)하는 방법
+            - 이미지
+                
+                ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/b172f94b-b551-4d2a-b594-11d4632e670e/Untitled.png)
+                
+        - 각 가중치들이 결과에 주는 영향력이 다르다면, 영향력이 적은 가중치의 연결을 삭제하여
+        정확도 손실을 최소화 하면서 사용하는 파라미터의 수를 줄일 수 있음
+        - Pruning은 네트워크의 수많은 가중치들 중 상대적으로 중요도가 낮은 가중치의 연결을 삭제하여 사용하는 파라미터의 수를 줄이고, 네트워크를 경량화 하는 방법
+            - Pruning 예시 논문링크
+                
+                [https://arxiv.org/abs/1506.02626](https://arxiv.org/abs/1506.02626)
+                
+                정확도의 손실이 거의 없이 AlexNet의 파라미터를 9배, VGG-16의 파라미터를 13배나 줄였습니다.
+                
+        - 희소성(sparse)
+            - 이미지
+                
+                ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/926b2008-ca85-4ce5-8618-f0ce2473b930/Untitled.png)
+                
+        - 만약 대부분의 가중치가 0이라면, 희소(sparse)한 것으로 간주할 수 있음
+        - 대부분이라는 기준을 수치로 확인하기 위해 사용하는 개념 - Sparsity
+        - Sparsity → 전체 네트워크에서 얼마나 많은 가중치가 (작은 수가 아닌) 정확하게 0인지를
+        나타내는 척도
+        - sparsity를 측정할 수 있는 가장 간단한 방법
+            - 공식활용
+                
+                $$
+                l_0 norm
+                $$
+                
+                $$
+                ∣∣x∣∣_0=∣x1∣^0+∣x2∣^0+...+∣xn∣^0
+                $$
+                
+        - 위 수식에서 각 요소가 1 또는 0으로 되며, $l_0 norm$은 요소 값이 0이 아닌 값들의 개수가 됨
+        - 전체 가중비 개수 대비 $l_0 norm$의 값을 확인하면 sparsity를 알 수 있음
+    
+    - **Pruning granularity**
+        - 각 요소를 pruning 하는것 : element-wise pruning or fine-grained pruning
+        - 어떠한 요소들을 그룹으로 묶고 그 그룹 전체에 대해 pruning 하는것
+            - Coarse-grained pruning / structed pruning / group pruning / block pruning
+        - 그룹은 여러 모양과 크기가 될 수 있음
+        - 위와 같이 pruning할 요소를 정하는것이 필요함
+    - **Prunning criteria**
+        - 가중치들 중 어떤 요소를 어떻게 prune할지 정하기 위한 기준이 필요함
+        - 해당 기준을 pruning criteria라고 함
+            - 예시 - 가중치 값에 대한 어떤한 threshold를 기준으로 할지
+            (0으로 바꿀지, 그대로 놔둘지) 판단하는 것
+            가중치들 중 절댓값이 작은 가중치는 결과에 미치는 영향이 작을 것이기 때문에
+            앞의 예시는 실제로 활용될 수 있는 pruning criteria 중 하나임
+            - pruning criteria을 설정할 때 고려해야할 요소들 중 다른 한가지는
+            dense-model(pruning 전 원래 모델)과 비교했을 때 어느정도의 정확도 하락을 허용할 것인지 판단
+    - **Pruning schedule**
+        - 가장 직설적인 pruning방법은 학습 후 pruning 하는 것
+        - 학습 완료 후 한번 pruning 하는 것 : one-shot pruning이라고 함
+        - 학습과 pruning과정을 거친 후 sparse한 네트워크를 다시 학습하는 것을
+        iterative pruning이라고 함
+        - pruning한 네트워크를 재 학습 하는 경우 성능이 더 상승한다고 알려져 있음
+        - one-shot을 할지 iterative을 할지 iterative라면 얼마나 많이 반복할지
+        매 iteration 마다 Prunning critera를 어떻게 설정 할지, 가중치를 가지치기할지,
+        언제 멈출지와 같은 정보를 총칭하여 Pruning schedule이라고 함
+        - pruning을 멈추는 타이밍 또한 스케쥴로 표현할 수 있음
+            - 예시 - 어떠한 sparsity level에 도달하면 멈추거나 목표로 하는 연산량에 도달하면 멈추도록 설정하는 것도 스케쥴로 볼 수 있음
+    - Sensitivity analysis
+        - pruning을 할 때 가장 어려운 부분을 가중치를 가지치기 할지 결정하는 threshold 값을 정하는 것과 목표로 하는 sparsity level을 정하는 것
+        - Sensitivity 분석은 어떤 가중치 또는 layer가 pruning할 때 영향 많이 영향을 많이 받는지 분석할 수 있는 방법으로 threshold나 sparsity level을 설정할 때 유용
+            - Sensitivity 분석하는 한가지 예시
+                - 먼저 특정 가중치 또는 group의 pruning level(sparsity를 몇 까지 할지)을
+                설정하고 pruning진행 후 성능을 평가
+                - 위 과정을 모든 가중치 또는 group에 대해 수행
+                - 과정을 통해 나온 결과로부터 우리는 어떤 가중치 또는 group이
+                얼마나 민감한지, 즉 결과에 얼마나 영향을 주는지 알 수 있음
+                - 많은 구조를 prune할 수록 model 구조에 대한 sensitivity 분석이 가능해짐
+                    - 요약
+                    각 가중치가 결과에 주는 sensitivity를 이해하기 위해 각각의 가중치를 prune한 뒤 평가하고, 정확도가 어떻게 변하는지 살펴봄으로써 그 가중치가 어느정도 중요한지 알 수 있다는것
+                    - AlexNet의 pruning sensitivity 예시 표
+                    - 이미지
+                        
+                        ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/cd016092-50c9-4063-aab1-41b591e2b500/Untitled.png)
+                        
+    - **Pruning 방법**
+        - **Magnitude Pruner**
+            - 가장 기본적인 방법으로, 어떠한 값을 기준으로 가중치를 thresolding 하는 방법
+            - 만약 가중치값이 기준값 이하 라면 0으로 만들고,
+            기준값 보다 크다면 그대로 두는 것
+            - 공식
+                
+                $$
+                thresh(wi)={w_i:if∣w_i∣>λ
+                            ,0:if∣w_i∣≤λ}
+                $$
+                
+        - **Sensitivity Pruner**
+            - 각 layer마다 threshold값을 찾는 것은 쉽지 않음
+            - Sensitivity Pruning 방법은 Convolution layer 그리고 Fully connected layer가
+            가우시안 분포를 갖고있다는 것을 활용함
+                - 예시 → pre-trained된 Alexnet의 첫번째 Convolution layer와 Fully-connected layer의 가중치 분포를 보면 가우시안 분포와 유사함을 알 수 있음
+                - 이미지
+                    
+                    ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/e80cb231-bcb1-42f9-9646-b9f0f445cff8/Untitled.png)
+                    
+                - Sensitivity Pruner에서 thresholding하는 pruning 기준은 아래와 같이 설정
+                    - 공식
+                        
+                        $$
+                        thresh(wi)={w_i:if∣w_i∣>λ
+                                    ,0:if∣w_i∣≤λ}
+                        $$
+                        
+                        $λ=s∗σl where σl$  is std of layer $l$ as measured on the dense model
+                        
+                - 만약 어떤 layer의 68% 가중치들의 값이 표준편차 보다 작을 때 기준이 되는 $*λ$는 $s*64%$%가 됨*
+                - 그렇다면 s는 어떻게 구할 수 있을까?
+                    - Song Han 교수님의 논문에서는 Sensitivity를 활용
+                        
+                        [https://arxiv.org/abs/1506.02626](https://arxiv.org/abs/1506.02626)
+                        
+                    
+                    논문에서는 iterative pruning을 사용했고,
+                    매 pruning 마다 sensitivity parameter인 s 값을 수정함
+                    
+                    - 따라서 Sensitivity Pruner의 동작은 아래와 같음
+                        - 모델에 대해 Sensitivity 분석을 수행
+                        - 분석을 통해 나온 Sensitivity parameter에 가중치들 분포의
+                        표준편차를 곱하여 threshold로 사용
+        - **Level Pruner**
+            - Level Pruner는 특정 값 기준으로 thresholding 하는 것이 아닌 특정 layer의
+            sparsity level로 pruning합니다. 즉, 각 가중치의 값을 보고 판단하는 것이 아닌 layer의 sparsity가 특정 값이 되게 끔 pruning함
+                - 예시 → 어떠한 layer의 sparsity level을 0.5(50%의 값이 0이게)로 pruning
+                한다고 가정하면, layer에 있는 가중치값들 중 상위 50%는 그대로 놔두고
+                하위 50%는 0으로 prune함
+                - Level pruner의 동작
+                    - pruning하려는 level의 절대값을 기준으로 정렬
+                    - 정렬된 결과에서 가장 작은것부터 sparsity level이 목표로 하는 값이 되는 수 만큼의 가중치를 0으로 변환
+        - **그 외 prunning 방법**
+            - Splicing Pruner, Automated Gradual Pruner(AGP), RNN Pruner,
+            Structure Pruners, Hybrid Pruning 등 다양한 pruning 방법이 있음
+            - pruning 알고리즘 내용들은 network compression을 위해
+            open-source인
+            [https://intellabs.github.io/distiller/pruning.html#han-et-al-2015](https://intellabs.github.io/distiller/pruning.html#han-et-al-2015)
+            Document에 잘 정리되어 있음
+    - **Sparse Matrix의 활용**
+        - Pruning을 거쳐 Sparsity가 높은 layer가 만들어짐
+        - 하지만 0으로 pruning된 가중치에 대한 정보를 여전히 가지고 있기 때문에
+        모델의 용량을 줄이기 위해서는 0에 대한 정보를 제거할 필요가 있음
+        - 실제로 weight layer를 하나의 행렬로 보았을 때 pruning된 결과는
+        Sparse matrix(희소행렬)의 형태로 나타남
+        - 희소행렬을 효율적으로 저장하는 방법으로는
+        COO(Coordinate Format)과 CSR(Compressed Sparse Row)가 있음
+        - COO는 0이 아닌 값의 값, 행, 열을 별도의 메모리에 저장하는 방법
+        Sparse matrix에서 0이 아닌 값의 개수가 a개 일 때 COO의 경우
+        3a개의 메모리 공간만이 필요함
+        - CSR은 COO처럼 값과 행의 정보를 가지고 있되 열에 대한 정보를 포인터(주소값)
+        형태로 가지고 있는 형태를 의미합니다.
+        - 데이터와 열의 인덱스는 COO와 마찬가지로 저장됨
+        행은 각 행에 몇개의 데이터가 있는지를 확인 후 그만큼 더하는 과정을 거침
+        예시 → 첫번째 행은 2개의 데이터가 있음 따라서 열 포인터는 +2를 함
+            - 이미지
+                
+                ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/e1b37ae8-06f0-4c4c-a9f2-02f7c6414446/Untitled.png)
+                
+        - Matrix의 행의 길이가 n개일 때 CSR에서 필요로하는 메모리공간의 개수는
+        $2a + (n+1)$개임 항상 그런것은 아니지만, CSR이 COO보다 더 적은 데이터를 사용한다고 알려져 있음
+        - 행에 대해 정리한 CSR과 반대로 열에 대해 정리한 것을 CSC라고 함
+        저장방법은 CSR과 동일함
+        - **Sparse Matrix를 저장하는 방법을 사용하면 Pruning된 weight layer를 효율적으로 저장할 수 있으며 저장할 때 필요한 메모리 수도 줄일 수 있습니다.**
+        
+- **Quantization**
+    - **Quantization**
+        - Quantization(양자화) 학습된 딥러닝 모델이 가중치값을 저장할 때 사용하는 비트의 수를 줄여서 모델의 크기를 줄이는 방법
+        - 딥런이에서는 숫자를 저장하고 연산할 때 주로 32개의 비트를 사용하는
+        32-bit floting point(또는 FP32)를 사용함
+        만약 가중치의 값이 더 적은 수의 비트로 표현해도 값의 차이가 작다면 더 적은 비트를 사용하는 편이 적은 메모리를 사용할 것임
+            - 이미지
+                
+                ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/7b330e71-f3b5-4601-b813-4ff6cef22ac9/Untitled.png)
+                
+        - Quantization은 가중치값을 저장할 때 FP16 또는 INT8로 표현 가능한 범위의 숫자로
+        변환한 뒤 해당 비트수 만큼의 메모리에 저장하는 방법
+        - Quantization을 하면 더 적은 비트를 사용하기 때문에 모델의 메모리 사용량이 줄어들며, 모델을 사용해 추론(Inference)할 때 동작시간을 단축할 수 있는 장점이 있음
+        - Quantization은 가중치값을 FP32가 아닌 FP16(16-bit floating point) 또는 INT8(8-bit integer)로 Bitband를 낮춰서 표현하여 사용하여 모델의 크기를 줄이는 방법
+    - **Quantization의 장점**
+        - 만약 FP32로 저장된 모델을 FP16으로 줄이면 메모리 사용량이 절반이 되며
+        (32-bit → 16-bit), INT8로 줄이면 메모리 사용량이 $\frac{1}{4}$이 됨
+        - 또한 연산시 더 적은 비트를 사용하기 때문에 학습된 모델을 활용해 Inference할 때
+        동작시간을 단축할 수 있으며 에너지 효율이 증가함
+        - [https://media.nips.cc/Conferences/2015/tutorialslides/Dally-NIPS-Tutorial-2015.pdf](https://media.nips.cc/Conferences/2015/tutorialslides/Dally-NIPS-Tutorial-2015.pdf)
+        에서 살펴보면 INT8을 활용하면 아래와 같이 add 연산과 multiply 연산에서 에너지와
+        저장공간 절약을 크게 이뤄낼 수 있습니다.
+        - 이미지
+            
+            ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/86f44f9f-58e8-453c-9978-28d0b6446e14/Untitled.png)
+            
+        - 최근에는 Tensorflow, MXNet등 대부분의 딥러닝 프레임워크에서 FP16, INT8등의
+        Qunatization을 지원하고 있기 때문에 쉽고 빠르게 사용해 볼 수 있습니다.
+    - **Quantization시 주의사항**
+        - 최근에 대부분의 딥러닝 프레임워크에서 Quantization을 지원하기 때문에 직접
+        Quantization을 구현할 일이 없음.
+        - **Dynamic Range 와 Precision / Resolution**
+            - 모델을 Quantization할 때 주의해야 할 것중 하나는
+            Dynamic range(숫자의 표현 범위)이고,
+            또 다른 하나는 Precision / Resolution(범위 내에서 얼마나 세밀하게 숫자를 나눠서 표현 가능한가)
+            - 32개의 비트를 사용하는 FP32에서 dynamic range는 $±3.4x10^{38}$
+            또 $4.2x10^9$개의 숫자를 표현할 수 있음
+            하지만 INT8에서 dynamic range는 [-128….127]이고, $2^n$개의 숫자를 표현할 수 있음
+            - 이렇듯 INT8이 FP32보다 적은 수의 숫자를 덜 정밀하게 표한하게 되고, 이는 모델의 성능에 영향을 줌
+            - INT8의 dynamic range를 극복하기 위해 사용하는 방법이 scale factor를 사용하는 것
+                - 예시→ FP32모델을 INT8로 모델을 변환한다고 가정한다면
+                Layer의 가중치가 모두 -1 ~ 1 사이에 있다면 원래 가중치값에 127을 곱하고
+                가중치가 -0.5 ~ 0.5 사이에 있을때는 255를 곱하여 [-127…127]사이의 숫자로
+                표현할 수 있음
+                만약 가중치가 -1270 ~ 1270사이의 큰 숫자라면, 0.1을 scale factor로 사용하여
+                [-127…127]사이의 숫자로 표현할 수 있음
+                - 숫자표현의 정밀도인 resolution을 늘리기 위해서 사용하는 방법은 layer의
+                가중치값 중 최대값과 최소값읮 우간값이 0으로 오게 전체 값을 이동함
+                이러한 shift는 zero point라 불리는 interger값을 더하는 것으로 구현할 수 있음
+                - 이렇듯 scale factor와 zero point를 사용하면 중간 값을 더욱 정확하고 정밀하게 표현할 수 있음
+                하지만 scale factor 및 zero point를 저장하기 위한 메모리 공간이 추가로 필요한 단점이 있음
+        - **Overflows**
+            - Convolution 또는 Fully-connected layer는 연산하는 중간에 연산중인 값들을 누적함
+            - Quantization을 사용하여 사용하는 비트가 줄어드는 경우 중간값 누적 과정에서
+            dynamic range를 초과하는 숫자가 발생할 수 있음
+            - n-bit int(n개의 비트를 가진 정수)끼리의 곱셈의 경우 최대 $2n$개의 비트가 필요함
+            따라서 overflow를 피하기 위해서는 중간 누적값을 저장하는 공간을 충분한 수의
+            비트를 사용해야함
+                - 예시 → Convolution layer의 경우 곱셈연산 후 값 누적을 $c⋅k^2$번 수행함
+                (c는 채널 수, k는 커널 크기) 따라서 overflow를 피하기 위해서는
+                $2_n+log_2(c⋅k^2)-bit$를 사용해야 함
+        - **Quantization 기법들**
+            - 이미지
+                
+                ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/f07961d2-8980-4372-9893-e0539500fbeb/Untitled.png)
+                
+            - **Post-Training Quantization : 학습이 완료된 모델의 양자화 방법**
+                - **Dynamic quantization**
+                    - 가중치는 항상 양자화 하고, activation은 inference 할 때 양자화 하는 방법
+                    따라서 activation은 메모리에 저장될 때 floating-point 형태로 저장됨
+                    - 어떠한 값을 floating에서 interger로 양자화 할 때 값의 범위를 맞추기 위해
+                    가중치들의 중간값을 0으로 보정하기 위한 zero-point와 min/max값을 사용하는 비트의 최대숫자에 맞추기 위한 scale factor가 필요함
+                    - Dynamic quantization은 Activation이 Floating-point로 저장됨
+                    우리는 Inference할 때 activation을 양자화 하기 위한
+                    scale factor와 zero-point값을 알지 못하고
+                    Inference할 때 마다 scale factor와 zero-point를 동적으로 계산해줘야 함
+                    - Dynamic quantization은 fine-turning이나 calibration을 위한
+                    추가적인 데이터가 불필요하며 정확도 손실이 적은 장점이 있음
+                - **Static quantization**
+                    - 가중치와 activation을 모두 양자화 하는 방법
+                    - Dynamic quantization과 다르게 activation의 scale factor와 zero point를
+                    계산할 필요가 없어 연산이 빠른 장점이 있음
+                    - 또한 Convolution, Activation, Batch Normalization 모두 같은 비트수를 사용하여 숫자를 표현하기 때문에 각 layer를 융합할 수 있음
+                    융합한 layer는 병렬연산이 용이해지기 때문에 연산 효율이 증가함
+                    - Static quantization에서 고정된 scale factor와 zero-point는 inference하는
+                    데이터에 잘 맞지 않을 수 있음
+                    따라서 정확도 손실을 최소화 하기 위해 calibration(보정)작업을 수행함
+                    - Calibration을 위해서는 Unlabeled Data가 필요함
+                    만약 Unlabeled Data를 사용하지 않는다면, scale factor와 zero point가
+                    부정확해질 것이며(inference할 데이터에 맞게 보정되지 않음) 
+                    inference 했을 때 feature값이 실제 값과 차이가 발생하여 정확도 손실이
+                    발생함
+            - **Quantization Aware Training : 32bit를 사용하여 저장한 floating-point형 숫자를
+            더 낮은 비트를 사용하여 표현하는 방법**
+                - 숫자를 저장할 때 정확도 손실이 발생하며, 이 모델로부터 다시 원래 숫자를
+                복원할 때 양자화 하기 전의 값과 차이가 발생함
+                - 학습 할 때 Inference시 양자화로 인한 영향을 미리 모델링 하는 방법
+                - Post-Training Quantization은 큰 모델을 양자화 할 때 비해 양자화 모델의 성능하락을 최소화 할 수 있는 장점이 있음
+            
+- **Light weight architecture**
+    - network 자체 경량화
+        - AlexNet, VGGNet, ResNet 등 2016년까지 발표되던 네트워크들은
+        모두 성능이 비약적으로 좋아졌으나, 연산량 자체(파라미터 수)가 너무 많아지는 문제가 있었음
+        이에 네트워크의 파라미터 수를 줄이기 위해 여러 구조가 연구되었음
+        - 파라미터 수를 줄이는데 주력한 모델들 중 대표적인 것은
+        SqueezeNet, MobileNet, ShuffleNet등이 있음
+        - SqueezeNet은 fire Module이라는 구조를 제안하여 AlexNet 대비 50배 적은 파라미터
+        수로 유사한 성능을 보여줌
+        - Xception 모델은 Depthwise Separable Convolution이라는 효율적인 Convolution Layer를 제안함
+        - MobileNet은 Depthwise Separable Convolutions 구조를 적절히 활용해 모바일 디바이스에서 동작간으한 수준의 경량한 구조를 제안함
+        구조를 더욱 개량해 버전 3까지 발표되었음
+        - ShuffleNet은 Depthwise Separable Convolutions된 결과를 섞어서 경량화 되었지만,
+        성능이 좋은 네트워크를 만들었음
+        - 최근에는 NAS방법을 활용해 찾은 네트워크가 많이 사용됨
+        NAS는 정해진 탐색공간(네트워크깊이, 채널수, shorcut 사용 위치 등)에서
+        네트워크 구조를 직접 찾는 방법
+        MNasNet은 모바일 기기의 동작시간을 search space 포함하여 경량화 되었지만
+        좋은 성능을 보여주는 네트워크 구조를 활용
+            - 이미지
+                
+                ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/2562d34f-91d5-4b38-8808-2b57ec6b1263/Untitled.png)
+                
+            
+            이처럼 경량화 네트워크 설계하는 방법은 네트워크의 근본적인 연산량 문제를 해결할 수 있기 때문에 지속적으로 연구되고 발전되는 분야임
+            
+- **Knowledge Distillation**
+    - Knowledge Distillation이란 규모가 크고 잘 학습된 네트워크를 활용해 더 작은
+    네트워크를 학습하여 원래 네트워크 수준의 성능을 만드는 방법
+    - 일반적으로 큰 네트워크를 Teacher 모델, 작은 네트워크를 student 모델이라고 부르며
+    학습할때는 주로 여러 teacher model들을 ensemble하여 하나의 student 모델을 학습하는
+    형태로 이루어짐
+    - 학습할 때 Teacher 모델의 Loss와 Student 모델의 Loss를 동시에 반영하는 방법으로
+    Teacher모델을 학습에 활용
+    - 이미지
+        
+        ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/e5a74459-44bd-4c53-9ccc-9d2b039aca4f/Untitled.png)
+        
+    
+- 경량 딥러닝 기술 동향
+    
+    [https://ettrends.etri.re.kr/ettrends/176/0905176005/34-2_40-50.pdf](https://ettrends.etri.re.kr/ettrends/176/0905176005/34-2_40-50.pdf)
+    
+    [https://www.researchgate.net/publication/343574829_dib_leoning_model-ui_gyeonglyanghwa_gisul_donghyang](https://www.researchgate.net/publication/343574829_dib_leoning_model-ui_gyeonglyanghwa_gisul_donghyang)
+    
+
+출처 : [https://velog.io/@woojinn8/LightWeight-Deep-Learning-0.-딥러닝-모델-경량화](https://velog.io/@woojinn8/LightWeight-Deep-Learning-0.-%EB%94%A5%EB%9F%AC%EB%8B%9D-%EB%AA%A8%EB%8D%B8-%EA%B2%BD%EB%9F%89%ED%99%94)
